@@ -7,7 +7,6 @@ import urllib
 import urllib.request
 from pathlib import Path
 import pvporcupine
-from pvrecorder import PVRecorder
 from porcupine import PorcupineDemo
 
 
@@ -34,8 +33,8 @@ if (test_pico):
         access_key=pico_key,
         library_path=pvporcupine.LIBRARY_PATH,
         model_path=pvporcupine.MODEL_PATH,
-        keyword_paths=pvporcupine.KEYWORDS,
-        sensitivities=None,
+        keyword_paths=[pvporcupine.KEYWORD_PATHS[x] for x in pvporcupine.KEYWORDS],
+        sensitivities=[0.5] * len([pvporcupine.KEYWORD_PATHS[x] for x in pvporcupine.KEYWORDS]),
         input_device_index=-1)
 
     demo.run()
@@ -47,22 +46,22 @@ if (test_pico):
 
 
 
-    def get_next_audio_frame():
-        recorder = PvRecoder(device_index=-3)
-        recorder.start()
-        pcm = recorder.read()
-        ppn.process(pcm)
-        pass
+    # def get_next_audio_frame():
+    #     recorder = PvRecoder(device_index=-3)
+    #     recorder.start()
+    #     pcm = recorder.read()
+    #     ppn.process(pcm)
+    #     pass
 
-    while True:
-        audio_frame = get_next_audio_frame()
-        keyword_index = porcupine.process(audio_frame)
-        if keyword_index == 0:
-            # detected `porcupine`
-            print("porcupine")
-        elif keyword_index == 1:
-            print("bumblebee")
-            # detected `bumblebee`
+    # while True:
+    #     audio_frame = get_next_audio_frame()
+    #     keyword_index = porcupine.process(audio_frame)
+    #     if keyword_index == 0:
+    #         # detected `porcupine`
+    #         print("porcupine")
+    #     elif keyword_index == 1:
+    #         print("bumblebee")
+    #         # detected `bumblebee`
 
 if (test_assembly):
     print("test_assembly")
