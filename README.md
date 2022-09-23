@@ -11,3 +11,11 @@
     - Ordered
 - Render in greyscale
     - consider OpenCV: https://www.geeksforgeeks.org/python-grayscaling-of-images-using-opencv/
+
+## Getting Started
+
+** May need to run as sudo**
+
+```
+pip install .
+```

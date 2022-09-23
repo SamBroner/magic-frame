@@ -6,6 +6,10 @@ import requests
 import urllib
 import urllib.request
 from pathlib import Path
+import pvporcupine
+from pvrecorder import PVRecorder
+from porcupine import PorcupineDemo
+
 
 from dalle import Dalle2
 from dalle_automation import Selenium_Driver
@@ -24,6 +28,41 @@ test_assembly = False
 
 if (test_pico):
     print("test_pico")
+    PorcupineDemo.show_audio_devices()
+
+    demo = PorcupineDemo(
+        access_key=pico_key,
+        library_path=pvporcupine.LIBRARY_PATH,
+        model_path=pvporcupine.MODEL_PATH,
+        keyword_paths=pvporcupine.KEYWORDS,
+        sensitivities=None,
+        input_device_index=-1)
+
+    demo.run()
+
+    porcupine = pvporcupine.create(
+        access_key=pico_key,
+        keywords=['picovoice', 'bumblebee']
+    )
+
+
+
+    def get_next_audio_frame():
+        recorder = PvRecoder(device_index=-3)
+        recorder.start()
+        pcm = recorder.read()
+        ppn.process(pcm)
+        pass
+
+    while True:
+        audio_frame = get_next_audio_frame()
+        keyword_index = porcupine.process(audio_frame)
+        if keyword_index == 0:
+            # detected `porcupine`
+            print("porcupine")
+        elif keyword_index == 1:
+            print("bumblebee")
+            # detected `bumblebee`
 
 if (test_assembly):
     print("test_assembly")
