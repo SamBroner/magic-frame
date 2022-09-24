@@ -7,11 +7,16 @@ import urllib
 import urllib.request
 from pathlib import Path
 import pvporcupine
-from porcupine import PorcupineDemo
+from voice.porcupine import PorcupineDemo
 
+from IT8951.display import AutoEPDDisplay
+from IT8951 import constants
+from sys import path
 
-from dalle import Dalle2
-from dalle_automation import Selenium_Driver
+from image_tools.tools import display_image, partial_update, default_display
+
+from dalle.dalle import Dalle2
+from dalle.dalle_automation import Selenium_Driver
 
 load_dotenv()
 
@@ -22,37 +27,26 @@ dalle_password = os.getenv('DALLE_PASSWORD')
 pico_key = os.getenv('PICO_KEY')
 image_path = os.getenv('IMAGE_PATH')
 
-
 test_opencv = False
-test_pico = False
+test_pico = True
 test_assembly = False
 test_dalle_selenium = False
-test_dalle_api = True
+test_dalle_api = False
 
-def computer_callback():
-    print("computer_callback")
+display = AutoEPDDisplay(vcom=-2.06, rotate='CW', mirror=False, spi_hz=24000000)
 
-    endpoint = "https://api.assemblyai.com/v2/transcript"
+default_display(display)
 
-    json = {
-    "audio_url": "https://storage.googleapis.com/bucket/b2c31290d9d8.wav"
-    }
-
-    headers = {
-    "Authorization": "c2a41970d9d811ec9d640242ac12",
-    "Content-Type": "application/json"
-    }
-
-    response = requests.post(endpoint, json=json, headers=headers)
-    parse(response)
+def get_text()
 
 def jarvis_callback():
     print("jarvis_callback")
 
-if (test_opencv):
-    print(os.getcwd())
+    img_path = '/home/pi/Pictures/Dall-E/generation-JqiIKN0LzZeoMXhwXV5QRbhd.webp'
+    print('Displaying "{}"...'.format(img_path))
+    display_image(display, img_path, "hello world")
 
-# Works
+
 if (test_pico):
     print("test_pico")
     PorcupineDemo.show_audio_devices()
@@ -60,7 +54,7 @@ if (test_pico):
     # jarvis, blueberry, alexa, grapefruit, ok google, picovoice, hey siri, grasshopper, hey barista, americano, porcupine, hey google, pico clock, bumblebee, computer, terminator
     fns = {
         'jarvis': jarvis_callback,
-       'computer': computer_callback
+    #    'computer': computer_callback
     }
 
     paths = [pvporcupine.KEYWORD_PATHS[x] for x in fns.keys()]
