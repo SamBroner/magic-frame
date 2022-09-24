@@ -51,12 +51,13 @@ class PorcupineDemo(Thread):
 
         self._output_path = output_path
 
-    def run(self):
+    def run(self, fns):
         """
          Creates an input audio stream, instantiates an instance of Porcupine object, and monitors the audio stream for
          occurrences of the wake word(s). It prints the time of detection for each occurrence and the wake word.
          """
 
+        #  get keyword ppns
         keywords = list()
         for x in self._keyword_paths:
             keyword_phrase_part = os.path.basename(x).replace('.ppn', '').split('_')
@@ -97,8 +98,11 @@ class PorcupineDemo(Thread):
                     wav_file.writeframes(struct.pack("h" * len(pcm), *pcm))
 
                 result = porcupine.process(pcm)
-                if result >= 0:
-                    print('[%s] Detected %s' % (str(datetime.now()), keywords[result]))
+                keyword = keywords[result]
+                if result >= 0:                    
+                    if fns.__contains__(keyword):
+                        fns[keyword]()
+
         except pvporcupine.PorcupineInvalidArgumentError as e:
             args = (
                 self._access_key,
