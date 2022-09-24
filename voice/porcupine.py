@@ -77,6 +77,7 @@ class PorcupineDemo(Thread):
                 keyword_paths=self._keyword_paths,
                 sensitivities=self._sensitivities)
 
+            #  framelength prints as 512
             recorder = PvRecorder(device_index=self._input_device_index, frame_length=porcupine.frame_length)
             recorder.start()
 

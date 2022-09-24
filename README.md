@@ -2,15 +2,13 @@
 
 ## To Do
 
+## To Do
+
 - Connect to Dall-E 2 and fetch an image
     - Fix login issue with the selenium browser
 - Connect to Assembly AI
-- Wake Word
-    - https://picovoice.ai/docs/porcupine/
-- Connect to Microphone
-    - Ordered
-- Render in greyscale
-    - consider OpenCV: https://www.geeksforgeeks.org/python-grayscaling-of-images-using-opencv/
+- render text
+- change save name so it can be replayed
 
 ## Getting Started
 
