@@ -31,12 +31,9 @@ load_dotenv()
 dalle_key = os.getenv('DALLE_KEY')
 dalle_email = os.getenv('DALLE_EMAIL')
 dalle_password = os.getenv('DALLE_PASSWORD')
-
 pico_key = os.getenv('PICO_KEY')
 image_path = os.getenv('IMAGE_PATH')
-
 assembly_key = os.getenv('ASSEMBLY_KEY')
-
 
 test_opencv = False
 test_pico = False

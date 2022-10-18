@@ -39,8 +39,9 @@ def display_image(display, path, text):
 
     display.draw_full(constants.DisplayModes.GC16)
 
-
     _place_text(display.frame_buf, text, x_offset=20, y_offset=375, fontsize=40)
+    
+    display.draw_partial(constants.DisplayModes.DU)
 
 
 def partial_update(display):
