@@ -1,4 +1,4 @@
-import os
+import glob,os
 from dotenv import load_dotenv
 import logging
 import time
@@ -7,15 +7,17 @@ import urllib
 import urllib.request
 from pathlib import Path
 
-import pvporcupine
-from voice.porcupine import PorcupineDemo
-from pvrecorder import PvRecorder
+# import pvporcupine
+# from voice.porcupine import PorcupineDemo
+# import pvcheetah
 
-import websockets
-import asyncio
-import base64
-import json
-import pyaudio
+# from pvrecorder import PvRecorder
+
+# import websockets
+# import asyncio
+# import base64
+# import json
+# import pyaudio
 
 from IT8951.display import AutoEPDDisplay
 from IT8951 import constants
@@ -25,6 +27,8 @@ from image_tools.tools import display_image, partial_update, default_display
 
 from dalle.dalle import Dalle2
 from dalle.dalle_automation import Selenium_Driver
+
+from voice import VoiceManager
 
 load_dotenv()
 
@@ -37,108 +41,48 @@ assembly_key = os.getenv('ASSEMBLY_KEY')
 
 test_opencv = False
 test_pico = False
-test_assembly = True
 test_dalle_selenium = False
 test_dalle_api = False
+test_display = True
+test_rename = False
 
 display = AutoEPDDisplay(vcom=-2.06, rotate='CW', mirror=False, spi_hz=24000000)
-URL = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
 default_display(display)
 
- 
-async def send_receive(recorder):
-    print(f'Connecting websocket to url ${URL}')
-    async with websockets.connect(
-        URL,
-        extra_headers=(("Authorization", assembly_key),),
-        ping_interval=5,
-        ping_timeout=20
-    ) as _ws:
+if (test_display):
+    dalle = Dalle2(dalle_key)
 
-        await asyncio.sleep(0.1)
-        print("Receiving SessionBegins ...")
-        session_begins = await _ws.recv()
-        print(session_begins)
-        print("Sending messages ...")
+    # This can be removed
+    fns = {
+        'jarvis': lambda a: print("jarvis"),
+    #    'computer': computer_callback
+    }
 
-        async def send():
-            while True:
-                try:
-                   data = recorder.read(FRAMES_PER_BUFFER)
-                   data = base64.b64encode(data).decode("utf-8")
-                   json_data = json.dumps({"audio_data":str(data)})
-                   await _ws.send(json_data)
-                except websockets.exceptions.ConnectionClosedError as e:
-                   print(e)
-                   assert e.code == 4008
-                   break
-                except Exception as e:
-                   assert False, "Not a websocket 4008 error"
-                
-                await asyncio.sleep(0.01)
-            return True
+    vm = VoiceManager(pico_access_key=pico_key, fns=fns, input_device_index=-1)
+    transcript = vm.run()
+    print(transcript)
 
-        async def receive():
-            stopper = False # Helps make sure you only record one sentence
-            last_text = ""
-            while True:
-                try:
-                    result_str = await _ws.recv()
-                    print(result_str)
-                    text = json.loads(result_str)['text']
-                    if (stopper == True and text == "" ):
-                        print ("STOPPPINGSTOPPING")
-                        return last_text
-                        # break
-                    if (text != ""):
-                        stopper=True
-                        last_text = text
-                    print(json.loads(result_str)['text'])
-                except websockets.exceptions.ConnectionClosedError as e:
-                    print(e)
-                    assert e.code == 4008
-                    break
-                except Exception as e:
-                    assert False, "Not a websocket 4008 error"
-        
-        send_task = asyncio.create_task(send())
-        receive_task = asyncio.create_task(receive())
-        result = await asyncio.wait([send_task, receive_task], return_when=asyncio.FIRST_COMPLETED)
-
-        send_task.cancel()
-        await _ws.close()
-        return result[0]
-
-
-if (test_assembly):
-    print("test_assembly")
-    FRAMES_PER_BUFFER = 3200
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 1
-    RATE = 16000
-    p = pyaudio.PyAudio()
+    dalle.generate_and_download(transcript, "./imgs/tmp")
     
-    # starts recording
-    stream = p.open(
-        format=FORMAT,
-        channels=CHANNELS,
-        rate=RATE,
-        input_device_index=-1,
-        input=True,
-        frames_per_buffer=FRAMES_PER_BUFFER
-    )
+    temp_dir = "./imgs/tmp"
+    targ_dir = "./imgs"
+    i = 0
+    for file in os.listdir(temp_dir):
+        os.rename(os.path.join(temp_dir,file), os.path.join(targ_dir,transcript + "-" + str(i) + ".webp"))
+        i += 1
 
-    receive_results = asyncio.run(send_receive(stream))
-    result = receive_results.pop().result()
-    print(result)
+    display_image(display, os.path.join(targ_dir, transcript + "-0" + ".webp"), transcript)
 
-def jarvis_callback():
-    print("jarvis_callback")
+if (test_rename):
+    faketranscript = "transcip"
+    temp_dir = "./imgs/tmp"
+    targ_dir = "./imgs"
+    i = 0
+    for file in os.listdir(temp_dir):
+        os.rename(os.path.join(temp_dir,file), os.path.join(targ_dir,'transcript-' + str(i) + ".webp"))
+        i += 1
 
-    img_path = '/home/pi/Pictures/Dall-E/generation-JqiIKN0LzZeoMXhwXV5QRbhd.webp'
-    print('Displaying "{}"...'.format(img_path))
-    display_image(display, img_path, "hello world")
 
 if (test_pico):
     print("test_pico")
@@ -146,7 +90,7 @@ if (test_pico):
 
     # jarvis, blueberry, alexa, grapefruit, ok google, picovoice, hey siri, grasshopper, hey barista, americano, porcupine, hey google, pico clock, bumblebee, computer, terminator
     fns = {
-        'jarvis': jarvis_callback,
+        'jarvis': lambda a: print("jarvis"),
     #    'computer': computer_callback
     }
 
@@ -162,7 +106,6 @@ if (test_pico):
 
     recorder, porcupine = demo.run(fns)
 
-
 # Does not work
 if (test_dalle_selenium):
     print("test_dalle")
@@ -173,4 +116,4 @@ if (test_dalle_selenium):
 # Works
 if (test_dalle_api):
     dalle = Dalle2(dalle_key)
-    dalle.generate_and_download("an abstract image of an astronaut on a sailboat", image_path)
+    dalle.generate_and_download("a frog with really big front teath", image_path)

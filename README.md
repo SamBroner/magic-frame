@@ -16,4 +16,19 @@
 
 ```
 pip install .
+python start
 ```
+
+
+## Getting a dalle token
+
+https://github.com/ezzcodeezzlife/dalle2-in-python
+
+1. Go to https://openai.com/dall-e-2/
+2. Create a OpenAI Account
+3. Go to https://labs.openai.com/
+4. Open the Network Tab in Developer Tools
+5. Type a prompt and press "Generate"
+6. Look for fetch to https://labs.openai.com/api/labs/tasks
+7. In the request header look for authorization then get the Bearer Token ("sess-xxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+8. Put the bearer token ("sess-xxxxxxxxxxxxxxxxxxxxxxxxxxxx") into the .env file
