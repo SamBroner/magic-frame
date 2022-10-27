@@ -35,7 +35,7 @@ class VoiceManager(Thread):
     def __init__(
         self,
         pico_access_key,
-        fns,
+        keywords,
         input_device_index,
         sensitivity = .8
         ):
@@ -45,8 +45,7 @@ class VoiceManager(Thread):
 
         self.input = pyaudio.PyAudio()
 
-        self.fns = fns
-        self._keyword_paths = [pvporcupine.KEYWORD_PATHS[x] for x in self.fns.keys()]
+        self._keyword_paths = [pvporcupine.KEYWORD_PATHS[x] for x in keywords]
 
         self.porcupine = pvporcupine.create(
                 access_key=self._pico_access_key,
@@ -93,8 +92,10 @@ class VoiceManager(Thread):
         first_porc = True
         first_cheet = True
     
+        # Keep appending content to the transcript
         transcript = ""
 
+        # Audio Loop - keeps pulling off new audio frames from the stream
         while(True):
             pcm = stream.read(self.porcupine.frame_length)
             pcm_tuple = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
@@ -130,7 +131,3 @@ class VoiceManager(Thread):
                 print("---------------- End ----------------")
                 break
         return transcript
-
-
-# voice_manager = VoiceManager(pico_access_key=pico_key, fns=fns, input_device_index=-1)
-# voice_manager.run()
