@@ -19,6 +19,9 @@ import json
 
 import struct
 
+from image_tools.tools import display_image, partial_update, default_display, _place_text
+from IT8951 import constants
+
 load_dotenv()
 
 dalle_key = os.getenv('DALLE_KEY')
@@ -69,7 +72,7 @@ class VoiceManager(Thread):
         )
     
     
-    def run(self):
+    def run(self, display):
         FRAMES_PER_BUFFER = 3200
         FRAME_LENGTH = 512 # (TODO)
         FORMAT = pyaudio.paInt16
@@ -85,10 +88,11 @@ class VoiceManager(Thread):
             frames_per_buffer=self.porcupine.frame_length
         )
 
-        listening_wakeword = True
+        listening_for_wakeword = True
         is_endpoint = False
 
         print("Audio Loop Starting... ")
+        # Used to print stage of audio loop
         first_porc = True
         first_cheet = True
     
@@ -100,8 +104,8 @@ class VoiceManager(Thread):
             pcm = stream.read(self.porcupine.frame_length)
             pcm_tuple = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
 
-            if listening_wakeword:
-                if first_porc:
+            if listening_for_wakeword:
+                if first_porc: # Print the current stage of the loop
                     print("porcupine")
                     first_porc = False
                     first_cheet = True
@@ -110,22 +114,32 @@ class VoiceManager(Thread):
                 keyword = self.keywords[result]
                 if result >= 0:                    
                     print("-----result-----")
-                    listening_wakeword = False
+                    listening_for_wakeword = False
                     time_end = time.time() + 10
+                    
+                    # Clear display 
+                    display.frame_buf.paste(0xFF, box=(0, 0, display.width, display.height))
+                    display.draw_full(constants.DisplayModes.DU) # is this necessary?
 
+
+            # wait for an endpoint or cut it off at 10 seconds
             elif time.time() < time_end and not is_endpoint:
-                if first_cheet:
+                if first_cheet: # Print the current stage of the loop
                     first_cheet = False
                     first_porc = True
                     print("cheetah")
                 partial_transcript, is_endpoint = self.cheetah.process(pcm_tuple)
 
                 transcript += partial_transcript
+                _place_text(display.frame_buf, transcript, x_offset=20, y_offset=375, fontsize=40)
+     
+                display.draw_partial(constants.DisplayModes.DU)
+                
                 print(partial_transcript, end='', flush=True) # Flush makes sure the print happens in this loop of while
                 if is_endpoint:
                     print("endpoint")
             else:
-                listening_wakeword = True
+                listening_for_wakeword = True
                 partial_transcript = self.cheetah.flush()
                 transcript += partial_transcript
                 print("---------------- End ----------------")

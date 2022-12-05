@@ -40,7 +40,7 @@ def run_display():
 
     # Create Voice Manager
     vm = VoiceManager(pico_access_key=pico_key, keywords=["jarvis"], input_device_index=-1)
-    time.sleep(5)
+    time.sleep(10)
     default_display(display)
 
     transcript = vm.run(display)
