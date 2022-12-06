@@ -161,12 +161,10 @@ async def send_receive():
                     json_data = json.dumps({"audio_data":str(data)})
                     await _ws.send(json_data)
                 except websockets.exceptions.ConnectionClosedError as e:
-                    print("--A--")
                     print(e)
                     assert e.code == 4008
                     break
                 except Exception as e:
-                    print("--B--")
                     print(e)
                     break
                     # TODO: eat this error. It's because we close the session in receive and continue sending data.
@@ -186,14 +184,10 @@ async def send_receive():
                         await _ws.close()
                         return load['text']
                 except websockets.exceptions.ConnectionClosedError as e:
-                    print("--C--")
-
                     print(e)
                     assert e.code == 4008
                     break
                 except Exception as e:
-                    print("--D--")
-
                     assert False, "Not a websocket 4008 error"
       
         send_result, receive_result = await asyncio.gather(send(), receive())
