@@ -1,5 +1,6 @@
 import glob
 import os
+import string
 from dotenv import load_dotenv
 import logging
 import time
@@ -9,6 +10,7 @@ import urllib.request
 from pathlib import Path
 import asyncio
 import threading
+import openai
 
 import pvporcupine
 from collections import deque
@@ -33,9 +35,10 @@ from voice import VoiceManager
 
 load_dotenv()
 
-dalle_key = os.getenv('DALLE_KEY')
-dalle_email = os.getenv('DALLE_EMAIL')
-dalle_password = os.getenv('DALLE_PASSWORD')
+# dalle_key = os.getenv('DALLE_KEY')
+# dalle_email = os.getenv('DALLE_EMAIL')
+# dalle_password = os.getenv('DALLE_PASSWORD')
+dalle_secret = os.getenv('DALLE_SECRET')
 pico_key = os.getenv('PICO_KEY')
 image_path = os.getenv('IMAGE_PATH')
 assembly_key = os.getenv('ASSEMBLY_KEY')
@@ -84,6 +87,8 @@ test_dalle = False
 
 # run_display()
 
+openai.api_key = dalle_secret
+
 # Create Audio Stream
 input = pyaudio.PyAudio()
 FRAMES_PER_BUFFER = 3200
@@ -120,7 +125,6 @@ loop = asyncio.get_event_loop()
 
 # Create WakeWord Event
 wakeword_event = asyncio.Event()
-
 
 async def voice_trigger_setter():
     print("set")
@@ -228,12 +232,48 @@ async def send_receive():
         return receive_result
 
 
+def make_directory(prompt):
+    t = round(time.time())
+    os.mkdir(os.path.join("./imgs", str(t)))
+    with (open("./imgs/" + str(t) + "/prompt.txt", "w")) as f:
+        f.write(prompt)
+    return str(t)
+
+def get_img_name(prompt):
+    # create a translation table to remove punctuation and make the string lowercase
+    table = str.maketrans('', '', string.punctuation)
+
+    # apply the translation table to the string
+    processed_string = prompt.translate(table).lower()
+
+    # replace spaces with underscores
+    processed_string = processed_string.replace(" ", "_")
+
+    # print the processed string
+    return processed_string
+
+def download_image(url, t, prompt):
+    response = requests.get(url)
+
+    path = os.path.join("./imgs", t, get_img_name(prompt) + ".jpeg")
+    with open(path, 'wb') as f:
+        f.write(response.content)
+    return path
+
 async def main():
     print("Hello, World")
     await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
     print("Awake")
     _, prompt = await asyncio.gather(display_thinking(), send_receive())
     print(prompt)
+    t = make_directory(prompt)
+    response = openai.Image.create(
+        prompt=prompt,
+        n=1,
+        size="1024x1024"
+    )
+    image_url = response["data"][0]["url"]
+    download_image(image_url, t, prompt)
     print("done")
 
 thread = threading.Thread(target=audio_capture)

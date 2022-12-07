@@ -32,3 +32,17 @@ https://github.com/ezzcodeezzlife/dalle2-in-python
 6. Look for fetch to https://labs.openai.com/api/labs/tasks
 7. In the request header look for authorization then get the Bearer Token ("sess-xxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 8. Put the bearer token ("sess-xxxxxxxxxxxxxxxxxxxxxxxxxxxx") into the .env file
+
+
+## Issues
+```
+Importing the numpy C-extensions failed. This error can happen for
+many reasons, often due to issues with your setup or how NumPy was
+installed.
+```
+Ended up uninstalling numpy and installying python3-numpy
+
+```
+pip uninstall numpy  # remove previously installed version
+apt install python3-numpy
+```

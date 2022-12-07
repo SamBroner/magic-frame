@@ -1,7 +1,7 @@
 import sys, os
 from setuptools import setup
 
-dependencies = ['Pillow', 'python-dotenv', 'pvporcupine', 'pvcheetah', 'webdriver-manager', 'selenium','pvrecorder', "websockets", "pyaudio"]
+dependencies = ['Pillow', 'python-dotenv', 'pvporcupine', 'pvcheetah', 'webdriver-manager', 'selenium','pvrecorder', "openai", "websockets", "pyaudio"]
 
 if os.path.exists('/sys/bus/platform/drivers/gpiomem-bcm2835'):
     dependencies += ['RPi.GPIO', 'spidev']
