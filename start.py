@@ -261,20 +261,22 @@ def download_image(url, t, prompt):
     return path
 
 async def main():
-    print("Hello, World")
-    await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
-    print("Awake")
-    _, prompt = await asyncio.gather(display_thinking(), send_receive())
-    print(prompt)
-    t = make_directory(prompt)
-    response = openai.Image.create(
-        prompt=prompt,
-        n=1,
-        size="1024x1024"
-    )
-    image_url = response["data"][0]["url"]
-    download_image(image_url, t, prompt)
-    print("done")
+    while True:
+        print("Hello, World")
+        await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
+        print("Awake")
+        _, prompt = await asyncio.gather(display_thinking(), send_receive())
+        print(prompt)
+        t = make_directory(prompt)
+        response = openai.Image.create(
+            prompt=prompt,
+            n=1,
+            size="1024x1024"
+        )
+        image_url = response["data"][0]["url"]
+        image_path = download_image(image_url, t, prompt)
+        display_image(display, image_path, prompt)
+        print("done")
 
 thread = threading.Thread(target=audio_capture)
 thread.start()
