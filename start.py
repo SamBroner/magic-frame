@@ -1,51 +1,34 @@
-import glob
 import os
 import string
 from dotenv import load_dotenv
-import logging
 import time
 import requests
-import urllib
 import urllib.request
-from pathlib import Path
 import asyncio
 import threading
 import openai
-
 import pvporcupine
 from collections import deque
-
 import pyaudio
 import websockets
 import asyncio
 import base64
 import json
 import struct
-
 from IT8951.display import AutoEPDDisplay
-from IT8951 import constants
-from sys import path
 
 from image_tools.tools import display_image, partial_update, default_display
-
-from dalle.dalle import Dalle2
-from dalle.dalle_automation import Selenium_Driver
-
-from voice import VoiceManager
 
 load_dotenv()
 
 dalle_secret = os.getenv('DALLE_SECRET')
 pico_key = os.getenv('PICO_KEY')
-image_path = os.getenv('IMAGE_PATH')
 assembly_key = os.getenv('ASSEMBLY_KEY')
 
 display = AutoEPDDisplay(vcom=-2.06, rotate='CW',
                          mirror=False, spi_hz=24000000)
 
 default_display(display)
-
-test_dalle = False
 
 openai.api_key = dalle_secret
 
@@ -60,7 +43,8 @@ RATE = 16000
 # Create porcupine voice manager
 porcupine = pvporcupine.create(
     access_key=pico_key,
-    keywords=["jarvis"])
+    keywords=["jarvis"],
+    sensitivities=[0.8],)
 
 stream = input.open(
     format=FORMAT,
@@ -73,6 +57,8 @@ stream = input.open(
 frames = deque(maxlen=1000)
 
 # Create Audio Capture Thread. The frames object is used to transport audio across threads
+
+
 def audio_capture():
     while True:
         pcm = stream.read(porcupine.frame_length)
@@ -86,11 +72,12 @@ loop = asyncio.get_event_loop()
 # Create WakeWord Event
 wakeword_event = asyncio.Event()
 
+
 async def voice_trigger_setter():
     print("set")
 
     # This frames object is used to re-add the audio of asking the question of Jarvis
-    trigger_frames = deque(maxlen=100)
+    trigger_frames = deque(maxlen=60)
     try:
         while True:
             if len(frames) > 0:
@@ -128,6 +115,7 @@ async def display_thinking():
 
 URL = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
+
 async def send_receive():
     print(f'Connecting websocket to url ${URL}')
     async with websockets.connect(
@@ -163,7 +151,7 @@ async def send_receive():
                 except Exception as e:
                     print(e)
                     break
-                    # TODO: We eat this error. It's because we close the session in receive and continue sending data.
+                    # TODO: We eat this error. The error is because we close the session in receive and continue sending data.
                 await asyncio.sleep(0.01)
 
             return True
@@ -199,6 +187,7 @@ def make_directory(prompt):
         f.write(prompt)
     return str(t)
 
+
 def get_img_name(prompt):
     # create a translation table to remove punctuation and make the string lowercase
     table = str.maketrans('', '', string.punctuation)
@@ -212,6 +201,7 @@ def get_img_name(prompt):
     # print the processed string
     return processed_string
 
+
 def download_image(url, t, prompt):
     response = requests.get(url)
 
@@ -220,12 +210,20 @@ def download_image(url, t, prompt):
         f.write(response.content)
     return path
 
+def clean_prompt(prompt):
+    print("Removing content before Trigger Word")
+    first_occurance = prompt.find("Jarvis")
+    trimmed_string = prompt[first_occurance:]
+    return trimmed_string
+
 async def main():
     while True:
         print("Hello, World")
         await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
         print("Awake")
         _, prompt = await asyncio.gather(display_thinking(), send_receive())
+        print(prompt)
+        prompt = clean_prompt(prompt)
         print(prompt)
         t = make_directory(prompt)
         response = openai.Image.create(
