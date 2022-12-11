@@ -6,6 +6,7 @@
 
 - [ ] Move helper functions into their own file
 - [ ] Move more constants into the .env and .config files
+- [ ] Better error handling, especially on file reads (e.g. what if no image gets downloaded from openai, then the dir doesn't have an image)
 - [ ] Fix the latency issues in start.py, specifically the 1second delay in the random image display
 - [ ] Consider making the loading screen faster
 - [ ] Refactor the text rendering in display.py/render so it's in it's own function

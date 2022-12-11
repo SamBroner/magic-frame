@@ -212,6 +212,10 @@ def download_image(url, t, prompt):
 def clean_prompt(prompt):
     print("Removing content before Trigger Word")
     first_occurance = prompt.find("Jarvis")
+    if (first_occurance == -1):
+        print("Trigger word not found")
+        return prompt
+        
     trimmed_string = prompt[first_occurance:]
     return trimmed_string
 
