@@ -4,11 +4,14 @@
 
 ## To Do
 
-- Connect to Dall-E 2 and fetch an image
-    - Fix login issue with the selenium browser
-- Connect to Assembly AI
-- render text
-- change save name so it can be replayed
+- [ ] Move helper functions into their own file
+- [ ] Move more constants into the .env and .config files
+- [ ] Fix the latency issues in start.py, specifically the 1second delay in the random image display
+- [ ] Consider making the loading screen faster
+- [ ] Refactor the text rendering in display.py/render so it's in it's own function
+- [ ] Fix the text rendering to change text sizes if text is too long
+- [ ] Consider making Jarvis slightly easier to trigger
+- [ ] Allow Assembly AI to take a longer pause
 
 ## Getting Started
 
@@ -18,21 +21,6 @@
 pip install .
 python start
 ```
-
-
-## Getting a dalle token
-
-https://github.com/ezzcodeezzlife/dalle2-in-python
-
-1. Go to https://openai.com/dall-e-2/
-2. Create a OpenAI Account
-3. Go to https://labs.openai.com/
-4. Open the Network Tab in Developer Tools
-5. Type a prompt and press "Generate"
-6. Look for fetch to https://labs.openai.com/api/labs/tasks
-7. In the request header look for authorization then get the Bearer Token ("sess-xxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-8. Put the bearer token ("sess-xxxxxxxxxxxxxxxxxxxxxxxxxxxx") into the .env file
-
 
 ## Issues
 ```

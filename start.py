@@ -53,13 +53,11 @@ stream = input.open(
 frames = deque(maxlen=1000)
 
 # Create Audio Capture Thread. The frames object is used to transport audio across threads
-
 def audio_capture():
     while True:
         pcm = stream.read(porcupine.frame_length)
         frames.append(pcm)
         time.sleep(0.01)
-
 
 # Create event Loop
 loop = asyncio.get_event_loop()
@@ -93,6 +91,7 @@ async def voice_trigger_setter():
 
 
 def display_random_image():
+    print("------Random Image------")
     dir = os.path.join("./imgs", random.choice(os.listdir("./imgs")))
 
     image = dir
@@ -107,18 +106,18 @@ def display_random_image():
 
 async def voice_trigger_waiter():
     try:
-        x = threading.Timer(5.0, display_random_image())
-        
-        x.start()
+        print("voice_trigger_waiter")
+        # x = threading.Timer(15.0, display_random_image(), 15.0)
+        # print("------a------")
+        # x.start()
+        # print("------b------")
         await wakeword_event.wait()
-        x.cancel()
+        # print("------c------")
+        # x.cancel()
 
     except Exception as e:
         print("voice_trigger_waiter Exception")
         print(e)
-
-async def display_thinking():
-    loading_screen(display)
 
 async def send_receive():
     print(f'Connecting websocket to url ${URL}')
@@ -224,10 +223,27 @@ def loading_screen_manager(loading_screen_event):
         loading_frame(display, i)
         time.sleep(0.1)
 
+def random_image_manager(random_image_event):
+    counter = 0
+    while True:
+        time.sleep(.1) # TODO: this introduces too much latency
+        if (random_image_event.is_set()):
+            break
+        counter = counter + 1
+        if counter % 600 == 0:
+
+            display_random_image()
+
 async def main():
     while True:
         print("Hello, World")
+        random_image_event = threading.Event()
+        random_image_thread = threading.Thread(target=random_image_manager, args=(random_image_event,))
+        random_image_thread.start()
+    
         await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
+        random_image_event.set()
+        random_image_thread.join()
         print("Awake")
         # First Thinking Image
         loading_screen_event = threading.Event()
