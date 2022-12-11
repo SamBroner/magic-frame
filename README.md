@@ -46,3 +46,11 @@ Ended up uninstalling numpy and installying python3-numpy
 pip uninstall numpy  # remove previously installed version
 apt install python3-numpy
 ```
+
+
+# Display Info
+https://www.waveshare.net/w/upload/c/c4/E-paper-mode-declaration.pdf
+## Display Mode Summary
+
+GC16 is to publish high quality images. It kind of works in draw partial, but not really?
+It seems like only DU works in 

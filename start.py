@@ -1,9 +1,7 @@
-import os
-import string
+import os, random, string
 from dotenv import load_dotenv
 import time
 import requests
-import urllib.request
 import asyncio
 import threading
 import openai
@@ -16,19 +14,17 @@ import base64
 import json
 import struct
 from IT8951.display import AutoEPDDisplay
-
-from image_tools.tools import display_image, partial_update, default_display
+from display import render, loading_screen, loading_frame
 
 load_dotenv()
 
 dalle_secret = os.getenv('DALLE_SECRET')
 pico_key = os.getenv('PICO_KEY')
 assembly_key = os.getenv('ASSEMBLY_KEY')
+URL = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
 display = AutoEPDDisplay(vcom=-2.06, rotate='CW',
                          mirror=False, spi_hz=24000000)
-
-default_display(display)
 
 openai.api_key = dalle_secret
 
@@ -58,7 +54,6 @@ frames = deque(maxlen=1000)
 
 # Create Audio Capture Thread. The frames object is used to transport audio across threads
 
-
 def audio_capture():
     while True:
         pcm = stream.read(porcupine.frame_length)
@@ -71,7 +66,6 @@ loop = asyncio.get_event_loop()
 
 # Create WakeWord Event
 wakeword_event = asyncio.Event()
-
 
 async def voice_trigger_setter():
     print("set")
@@ -98,23 +92,33 @@ async def voice_trigger_setter():
         print(e)
 
 
+def display_random_image():
+    dir = os.path.join("./imgs", random.choice(os.listdir("./imgs")))
+
+    image = dir
+    for file in os.listdir(dir):
+        if file.endswith(".jpeg"):
+            image = os.path.join(dir, file)
+
+    prompt_file = os.path.join(dir, "prompt.txt")
+    prompt = open(prompt_file, 'r').read()
+
+    render(display, prompt, image)
+
 async def voice_trigger_waiter():
     try:
+        x = threading.Timer(5.0, display_random_image())
+        
+        x.start()
         await wakeword_event.wait()
+        x.cancel()
+
     except Exception as e:
         print("voice_trigger_waiter Exception")
         print(e)
 
-
-async def connect_assembly_ai():
-    print("connected")
-
-
 async def display_thinking():
-    display_image(display, "./imgs/thinking.webp", "Let me get ready...")
-
-URL = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
-
+    loading_screen(display)
 
 async def send_receive():
     print(f'Connecting websocket to url ${URL}')
@@ -133,6 +137,7 @@ async def send_receive():
         async def send():
             while True:
                 try:
+                    # Assembly seems to want about a 6x larger package than porcupine
                     if (len(frames) > 6):
                         one = bytes(frames.popleft())
                         two = bytes(frames.popleft())
@@ -176,7 +181,7 @@ async def send_receive():
                 except Exception as e:
                     assert False, "Not a websocket 4008 error"
 
-        send_result, receive_result = await asyncio.gather(send(), receive())
+        _, receive_result = await asyncio.gather(send(), receive())
         return receive_result
 
 
@@ -191,14 +196,9 @@ def make_directory(prompt):
 def get_img_name(prompt):
     # create a translation table to remove punctuation and make the string lowercase
     table = str.maketrans('', '', string.punctuation)
-
     # apply the translation table to the string
     processed_string = prompt.translate(table).lower()
-
-    # replace spaces with underscores
     processed_string = processed_string.replace(" ", "_")
-
-    # print the processed string
     return processed_string
 
 
@@ -216,24 +216,45 @@ def clean_prompt(prompt):
     trimmed_string = prompt[first_occurance:]
     return trimmed_string
 
+def loading_screen_manager(loading_screen_event):
+
+    for i in range(17):
+        if (loading_screen_event.is_set()):
+            break
+        loading_frame(display, i)
+        time.sleep(0.1)
+
 async def main():
     while True:
         print("Hello, World")
         await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
         print("Awake")
-        _, prompt = await asyncio.gather(display_thinking(), send_receive())
-        print(prompt)
-        prompt = clean_prompt(prompt)
+        # First Thinking Image
+        loading_screen_event = threading.Event()
+        loading_screen_thread = threading.Thread(target=loading_screen_manager, args=(loading_screen_event,))
+        loading_screen_thread.start()
+
+        prompt = await asyncio.gather(send_receive())
+
+        prompt = clean_prompt(prompt[0])
+        # Second Thinking Image
         print(prompt)
         t = make_directory(prompt)
+
+        print("Sending to OpenAI")
         response = openai.Image.create(
             prompt=prompt,
             n=1,
             size="1024x1024"
         )
+        print("Received from OpenAI")
+        loading_screen_event.set()
+        loading_screen_thread.join()
+
         image_url = response["data"][0]["url"]
         image_path = download_image(image_url, t, prompt)
-        display_image(display, image_path, prompt)
+        # Final Image
+        render(display, prompt, image_path)
         print("done")
 
 thread = threading.Thread(target=audio_capture)

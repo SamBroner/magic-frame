@@ -3,6 +3,41 @@ from PIL import Image, ImageDraw, ImageFont
 from IT8951.display import AutoEPDDisplay
 from IT8951 import constants
 
+
+
+
+def clear_display(display):
+    display.frame_buf.paste(0xFF, box=(0, 0, display.width, display.height))
+    display.draw_full(constants.DisplayModes.GC16)
+
+def display_gradient(display):
+    print('Displaying gradient...')
+
+    # set frame buffer to gradient
+    for i in range(16):
+        color = i*0x10
+        box = (
+            i*display.width//16,      # xmin
+            0,                        # ymin
+            (i+1)*display.width//16,  # xmax
+            display.height            # ymax
+        )
+
+        display.frame_buf.paste(color, box=box)
+
+    # update display
+    display.draw_full(constants.DisplayModes.GC16)
+
+    # then add some black and white bars on top of it, to test updating with DU on top of GC16
+    box = (0, display.height//5, display.width, 2*display.height//5)
+    display.frame_buf.paste(0x00, box=box)
+
+    box = (0, 3*display.height//5, display.width, 4*display.height//5)
+    display.frame_buf.paste(0xF0, box=box)
+
+    display.draw_partial(constants.DisplayModes.DU)
+
+
 def default_display(display):
     display.frame_buf.paste(0xFF, box=(0, 0, display.width, display.height))
     img = Image.open("/home/pi/code/dall-e-2-art/imgs/thinking.webp")
@@ -42,7 +77,6 @@ def display_image(display, path, text):
     _place_text(display.frame_buf, text, x_offset=20, y_offset=375, fontsize=40)
      
     display.draw_partial(constants.DisplayModes.DU)
-
 
 def partial_update(display):
     print('Starting partial update...')
