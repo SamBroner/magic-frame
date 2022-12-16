@@ -1,4 +1,5 @@
-# dall-e-2-art
+# Magic Frame
+A "magic frame" that displays generated art from audio prompts to an e-ink display
 
 ## To Do
 
