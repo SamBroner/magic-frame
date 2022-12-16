@@ -1,27 +1,18 @@
-import os, random, string
-from dotenv import load_dotenv
-import time
-import requests
-import asyncio
-import threading
+import os, random, string, time, requests, asyncio, threading, websockets, asyncio, base64, json, struct
+from collections import deque
 import openai
 import pvporcupine
-from collections import deque
 import pyaudio
-import websockets
-import asyncio
-import base64
-import json
-import struct
 from IT8951.display import AutoEPDDisplay
-from display import render, loading_screen, loading_frame
+from display import render, loading_frame
+from dotenv import load_dotenv
 
 load_dotenv()
 
 dalle_secret = os.getenv('DALLE_SECRET')
 pico_key = os.getenv('PICO_KEY')
 assembly_key = os.getenv('ASSEMBLY_KEY')
-URL = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
+assembly_ai_url = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
 display = AutoEPDDisplay(vcom=-2.06, rotate='CW',
                          mirror=False, spi_hz=24000000)
@@ -40,8 +31,9 @@ RATE = 16000
 porcupine = pvporcupine.create(
     access_key=pico_key,
     keywords=["jarvis"],
-    sensitivities=[0.8],)
+    sensitivities=[0.7],)
 
+# Open an audio stream
 stream = input.open(
     format=FORMAT,
     channels=CHANNELS,
@@ -50,39 +42,36 @@ stream = input.open(
     input=True,
     frames_per_buffer=porcupine.frame_length)
 
-frames = deque(maxlen=1000)
+# Global audio frames object for using audio across threads
+audio_stream = deque(maxlen=1000)
 
 # Create Audio Capture Thread. The frames object is used to transport audio across threads
 def audio_capture():
     while True:
         pcm = stream.read(porcupine.frame_length)
-        frames.append(pcm)
+        audio_stream.append(pcm)
         time.sleep(0.01)
-
-# Create event Loop
-loop = asyncio.get_event_loop()
 
 # Create WakeWord Event
 wakeword_event = asyncio.Event()
 
 async def voice_trigger_setter():
-    print("set")
 
-    # This frames object is used to re-add the audio of asking the question of Jarvis
+    # trigger_frames object is used to re-add frames of audio from wake word ("jarvis") to the audio that is submitted to assemblyai
     trigger_frames = deque(maxlen=60)
     try:
         while True:
-            if len(frames) > 0:
-                pcm = frames.popleft()
+            if len(audio_stream) > 0:
+                pcm = audio_stream.popleft()
                 pcm_tuple = struct.unpack_from(
                     "h" * porcupine.frame_length, pcm)
                 result = porcupine.process(pcm_tuple)
                 trigger_frames.append(pcm)
                 if result >= 0:
                     wakeword_event.set()
-                    frames.clear()
+                    audio_stream.clear()
                     while (len(trigger_frames) > 0):
-                        frames.appendleft(trigger_frames.pop())
+                        audio_stream.appendleft(trigger_frames.pop())
 
                     break
     except Exception as e:
@@ -91,38 +80,36 @@ async def voice_trigger_setter():
 
 
 def display_random_image():
-    print("------Random Image------")
+    print("\n----- Random Image -----")
     dir = os.path.join("./imgs", random.choice(os.listdir("./imgs")))
+    print(dir)
 
     image = dir
     for file in os.listdir(dir):
         if file.endswith(".jpeg"):
             image = os.path.join(dir, file)
 
-    prompt_file = os.path.join(dir, "prompt.txt")
-    prompt = open(prompt_file, 'r').read()
+    if image == dir:
+        display_random_image()
+    else: 
+        prompt_file = os.path.join(dir, "prompt.txt")
+        prompt = open(prompt_file, 'r').read()
 
-    render(display, prompt, image)
+        render(display, prompt, image)
 
 async def voice_trigger_waiter():
     try:
         print("voice_trigger_waiter")
-        # x = threading.Timer(15.0, display_random_image(), 15.0)
-        # print("------a------")
-        # x.start()
-        # print("------b------")
         await wakeword_event.wait()
-        # print("------c------")
-        # x.cancel()
 
     except Exception as e:
         print("voice_trigger_waiter Exception")
         print(e)
 
-async def send_receive():
-    print(f'Connecting websocket to url ${URL}')
+async def assemblyai_manager():
+    print(f'Connecting websocket to url ${assembly_ai_url}')
     async with websockets.connect(
-        URL,
+        assembly_ai_url,
         extra_headers=(("Authorization", assembly_key),),
         ping_interval=5,
         ping_timeout=20
@@ -136,14 +123,14 @@ async def send_receive():
         async def send():
             while True:
                 try:
-                    # Assembly seems to want about a 6x larger package than porcupine
-                    if (len(frames) > 6):
-                        one = bytes(frames.popleft())
-                        two = bytes(frames.popleft())
-                        three = bytes(frames.popleft())
-                        four = bytes(frames.popleft())
-                        five = bytes(frames.popleft())
-                        six = bytes(frames.popleft())
+                    # AssemblyAI wants 100ms to 2000ms, so add some frames together
+                    if (len(audio_stream) > 6):
+                        one = bytes(audio_stream.popleft())
+                        two = bytes(audio_stream.popleft())
+                        three = bytes(audio_stream.popleft())
+                        four = bytes(audio_stream.popleft())
+                        five = bytes(audio_stream.popleft())
+                        six = bytes(audio_stream.popleft())
                         data = b''.join([one, two, three, four, five, six])
                         data = base64.b64encode(data).decode("utf-8")
                         json_data = json.dumps({"audio_data": str(data)})
@@ -161,7 +148,6 @@ async def send_receive():
             return True
 
         async def receive():
-            print("hello")
             while True:
                 try:
                     print("receiving...")
@@ -210,7 +196,9 @@ def download_image(url, t, prompt):
     return path
 
 def clean_prompt(prompt):
-    print("Removing content before Trigger Word")
+    """
+    Removes any audio fragments or additional words before the wake word
+    """
     first_occurance = prompt.find("Jarvis")
     if (first_occurance == -1):
         print("Trigger word not found")
@@ -219,9 +207,36 @@ def clean_prompt(prompt):
     trimmed_string = prompt[first_occurance:]
     return trimmed_string
 
-def loading_screen_manager(loading_screen_event):
+def remove_trigger_word(prompt):
+    """
+    Removes the trigger word and repeated user content from the prompt. This seems to clean up the dall-e output.
+    """
+    trim_length = prompt.find("Jarvis, show me")
+    if (trim_length != -1):
+        trimmed_string = prompt[trim_length + len("Jarvis, show me"):]
+        return trimmed_string.strip()
+    
+    trim_length = prompt.find("Jarvis,")
+    if (trim_length != -1):
+        trimmed_string = prompt[trim_length + len("Jarvis,"):]
+        return trimmed_string.strip()
 
+    trim_length = prompt.find("Jarvis.")
+    if (trim_length != -1):
+        trimmed_string = prompt[trim_length + len("Jarvis,"):]
+        return trimmed_string.strip()
+
+    trim_length = prompt.find("Jarvis")
+    if (trim_length != -1):
+        trimmed_string = prompt[trim_length + len("Jarvis"):]
+        return trimmed_string.strip()
+
+    print("Trigger word not found")
+    return prompt
+
+def loading_screen_manager(loading_screen_event):
     for i in range(17):
+        # Break out of loading screen once we have a response from openai
         if (loading_screen_event.is_set()):
             break
         loading_frame(display, i)
@@ -230,52 +245,59 @@ def loading_screen_manager(loading_screen_event):
 def random_image_manager(random_image_event):
     counter = 0
     while True:
-        time.sleep(.1) # TODO: this introduces too much latency
+        time.sleep(.1)
         if (random_image_event.is_set()):
             break
         counter = counter + 1
         if counter % 600 == 0:
-
             display_random_image()
 
 async def main():
     while True:
-        print("Hello, World")
-        random_image_event = threading.Event()
-        random_image_thread = threading.Thread(target=random_image_manager, args=(random_image_event,))
-        random_image_thread.start()
-    
-        await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
-        random_image_event.set()
-        random_image_thread.join()
-        print("Awake")
-        # First Thinking Image
-        loading_screen_event = threading.Event()
-        loading_screen_thread = threading.Thread(target=loading_screen_manager, args=(loading_screen_event,))
-        loading_screen_thread.start()
+        try:
+            random_image_event = threading.Event()
+            random_image_thread = threading.Thread(target=random_image_manager, args=(random_image_event,))
+            random_image_thread.start()
+        
+            await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
+            random_image_event.set()
+            random_image_thread.join()
+            print("Awake")
 
-        prompt = await asyncio.gather(send_receive())
+            loading_screen_event = threading.Event()
+            loading_screen_thread = threading.Thread(target=loading_screen_manager, args=(loading_screen_event,))
+            loading_screen_thread.start()
 
-        prompt = clean_prompt(prompt[0])
-        # Second Thinking Image
-        print(prompt)
-        t = make_directory(prompt)
+            prompt = await asyncio.gather(assemblyai_manager())
 
-        print("Sending to OpenAI")
-        response = openai.Image.create(
-            prompt=prompt,
-            n=1,
-            size="1024x1024"
-        )
-        print("Received from OpenAI")
-        loading_screen_event.set()
-        loading_screen_thread.join()
+            prompt = clean_prompt(prompt[0])
+            print("cleaned prompt: " + prompt)
+            trimmed_prompt = remove_trigger_word(prompt)
+            print("removed trigger word: " + trimmed_prompt)
+            if (trimmed_prompt != ""):
+                print(prompt)
+                t = make_directory(prompt)
 
-        image_url = response["data"][0]["url"]
-        image_path = download_image(image_url, t, prompt)
-        # Final Image
-        render(display, prompt, image_path)
-        print("done")
+                print("Sending to OpenAI")
+                response = openai.Image.create(
+                    prompt=trimmed_prompt,
+                    n=1,
+                    size="1024x1024"
+                )
+                print("Received from OpenAI")
+                loading_screen_event.set()
+                loading_screen_thread.join()
+
+                image_url = response["data"][0]["url"]
+                image_path = download_image(image_url, t, prompt)
+                # Final Image
+                render(display, prompt, image_path)
+                print("done")
+            else:
+                print("no prompt")
+        except Exception as e:
+            print(e)
+            pass
 
 thread = threading.Thread(target=audio_capture)
 thread.start()
@@ -284,8 +306,8 @@ thread.start()
 try:
     thread.join(timeout=5)
 except TimeoutError:
-    print("The thread did not start running within 5 seconds.")
+    print("The audio_capture thread did not start running within 5 seconds.")
 else:
-    print("The thread started running.")
+    print("\n------- The audio_capture thread started running. -------")
 
 asyncio.run(main())
