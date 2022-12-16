@@ -1,11 +1,15 @@
-import random, os, textwrap
+import random
+import os
+import textwrap
 from PIL import Image, ImageDraw, ImageFont
 from IT8951.display import AutoEPDDisplay
 from IT8951 import constants
 
+
 def clear_display(display):
     display.frame_buf.paste(0xFF, box=(0, 0, display.width, display.height))
     display.draw_full(constants.DisplayModes.INIT)
+
 
 def loading_frame(display, j):
     # set frame buffer to gradient
@@ -44,6 +48,7 @@ def render(display, prompt, image):
 
     display.draw_full(constants.DisplayModes.GC16)
 
+
 def _write_text_box(display, prompt, fontsize=60):
     """
     Write the prompt on the display, wrapping text to fit the screen. Recursively reduces fontsize until the prompt fits into 4 lines
@@ -71,35 +76,38 @@ def _write_text_box(display, prompt, fontsize=60):
     characters = 100
     while (remaining_text != ""):
         if (text_width > usable_width):
-            current_line = textwrap.shorten(current_line, width=characters, placeholder="")
+            current_line = textwrap.shorten(
+                current_line, width=characters, placeholder="")
             characters = characters - 1
         else:
             lines.append(current_line)
             remaining_text = remaining_text.split(current_line, 1)[1].strip()
             current_line = remaining_text
             characters = 100
-    
+
         text_width = font.getlength(current_line)
-    
+
     if (len(lines) > 4):
         print("Too many lines, recurse with smaller font")
-        _write_text_box(display, prompt, fontsize = fontsize - 2)
+        _write_text_box(display, prompt, fontsize=fontsize - 2)
     else:
         print("# of Lines:" + str(len(lines)))
         print("Font Size:" + str(fontsize))
         row_height = text_height + text_height/2
-        line_start_y = image_bottom + 10 + (usable_height - row_height * len(lines))/2
-        
+        line_start_y = image_bottom + 10 + \
+            (usable_height - row_height * len(lines))/2
+
         for line in lines:
             print(line)
             text_width = font.getlength(line)
             draw.text((10, line_start_y), line, font=font)
-            line_start_y = line_start_y + text_height + text_height/2 
+            line_start_y = line_start_y + text_height + text_height/2
+
 
 def display_integration_test():
 
     display = AutoEPDDisplay(vcom=-2.06, rotate='CW',
-                            mirror=False, spi_hz=24000000)
+                             mirror=False, spi_hz=24000000)
     clear_display(display)
 
     dir = os.path.join("./imgs", random.choice(os.listdir("./imgs")))
