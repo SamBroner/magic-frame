@@ -1,5 +1,23 @@
 # Magic Frame
-A "magic frame" that displays generated art from audio prompts to an e-ink display
+A "magic frame" that displays generated art from audio prompts to an e-ink display.
+
+[See it in action](https://twitter.com/SamBroner/status/1602137871523143680)
+
+- Images Generated from [Dall-E 2](https://openai.com/dall-e-2/)
+- Realtime Transcription from [AssemblyAI](https://www.assemblyai.com/)
+- Wakeword Detection from [Picovoice Porcupine](https://github.com/Picovoice/porcupine)
+
+## Getting Started
+1. Clone Repo
+2. Create accounts for AssemblyAI, OpenAI, and Picovoice. 
+3. Create .env from .env.template with keys
+4. Install
+5. Start
+
+```
+pip install .
+python start
+```
 
 ## To Do
 
@@ -14,16 +32,28 @@ A "magic frame" that displays generated art from audio prompts to an e-ink displ
 - [x] Fix the text rendering to change text sizes if text is too long
 - [x] Consider making Jarvis slightly easier to trigger
 
-## Getting Started
+# Dependencies
 
-*May need to run as sudo*
+## Hardware
+- [1200x825, 9.7inch E-Ink display HAT for Raspberry Pi](https://www.waveshare.com/9.7inch-e-paper-hat.htm) - $193.79
+- [Raspberry Pi Model 4B - 4GB Ram](https://www.adafruit.com/product/4296) - $55.00
+- [USB Lavalier Microphone](https://www.amazon.com/dp/B074BLM973) - $24.43
+- Frame - $12
+- Random - ~$15
 
-```
-pip install .
-python start
-```
+Total: $300.22
 
-## Issues
+## Libraries
+- [Greg D Meyer's Python wrapper around the IT8951 e-paper controller](https://github.com/GregDMeyer/IT8951)
+    - Seems to have limitations around partial update for GC16 (full image) renders
+    - This is somewhat blocking my ability to do a partial update with text before rendering the image
+- [Documentation for Display](https://www.waveshare.net/w/upload/c/c4/E-paper-mode-declaration.pdf)
+- [AssemblyAI](https://www.assemblyai.com/)
+- [Picovoice Porcupine](https://github.com/Picovoice/porcupine)
+- [PIL](https://pillow.readthedocs.io/en/stable/)
+- [Dall-E 2](https://openai.com/dall-e-2/)
+
+# Issues
 
 ### NUMPY (OpenAI dependency)
 ```
@@ -35,12 +65,3 @@ Ended up uninstalling numpy and installying python3-numpy
 pip uninstall numpy  # remove previously installed version
 apt install python3-numpy
 ```
-
-# Libraries & Dependencies
-- [Greg D Meyer's Python wrapper around the IT8951 e-paper controller](https://github.com/GregDMeyer/IT8951)
-    - Seems to have limitations around partial update for GC16 (full image) renders
-    - This is somewhat blocking my ability to do a partial update with text before rendering the image
-- [Documentation for Display](https://www.waveshare.net/w/upload/c/c4/E-paper-mode-declaration.pdf)
-- [AssemblyAI](https://www.assemblyai.com/)
-- [Picovoice Porcupine](https://github.com/Picovoice/porcupine)
-- [PIL](https://pillow.readthedocs.io/en/stable/)
