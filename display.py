@@ -86,6 +86,7 @@ def _write_text_box(display, prompt, fontsize=60):
         _write_text_box(display, prompt, fontsize = fontsize - 2)
     else:
         print("# of Lines:" + str(len(lines)))
+        print("Font Size:" + str(fontsize))
         row_height = text_height + text_height/2
         line_start_y = image_bottom + 10 + (usable_height - row_height * len(lines))/2
         

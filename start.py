@@ -1,4 +1,15 @@
-import os, random, string, time, requests, asyncio, threading, websockets, asyncio, base64, json, struct
+import os
+import random
+import string
+import time
+import requests
+import asyncio
+import threading
+import websockets
+import asyncio
+import base64
+import json
+import struct
 from collections import deque
 import openai
 import pvporcupine
@@ -13,16 +24,15 @@ dalle_secret = os.getenv('DALLE_SECRET')
 pico_key = os.getenv('PICO_KEY')
 assembly_key = os.getenv('ASSEMBLY_KEY')
 assembly_ai_url = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
+openai.api_key = dalle_secret
 
 display = AutoEPDDisplay(vcom=-2.06, rotate='CW',
                          mirror=False, spi_hz=24000000)
 
-openai.api_key = dalle_secret
-
 # Create Audio Stream
 input = pyaudio.PyAudio()
 FRAMES_PER_BUFFER = 3200
-FRAME_LENGTH = 512  # (TODO)
+FRAME_LENGTH = 512
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
@@ -46,16 +56,16 @@ stream = input.open(
 audio_stream = deque(maxlen=1000)
 
 # Create Audio Capture Thread. The frames object is used to transport audio across threads
+
+
 def audio_capture():
     while True:
         pcm = stream.read(porcupine.frame_length)
         audio_stream.append(pcm)
         time.sleep(0.01)
 
-# Create WakeWord Event
-wakeword_event = asyncio.Event()
 
-async def voice_trigger_setter():
+async def voice_trigger_setter(wakeword_event):
 
     # trigger_frames object is used to re-add frames of audio from wake word ("jarvis") to the audio that is submitted to assemblyai
     trigger_frames = deque(maxlen=60)
@@ -91,13 +101,14 @@ def display_random_image():
 
     if image == dir:
         display_random_image()
-    else: 
+    else:
         prompt_file = os.path.join(dir, "prompt.txt")
         prompt = open(prompt_file, 'r').read()
 
         render(display, prompt, image)
 
-async def voice_trigger_waiter():
+
+async def voice_trigger_waiter(wakeword_event):
     try:
         print("voice_trigger_waiter")
         await wakeword_event.wait()
@@ -105,6 +116,7 @@ async def voice_trigger_waiter():
     except Exception as e:
         print("voice_trigger_waiter Exception")
         print(e)
+
 
 async def assemblyai_manager():
     print(f'Connecting websocket to url ${assembly_ai_url}')
@@ -195,6 +207,7 @@ def download_image(url, t, prompt):
         f.write(response.content)
     return path
 
+
 def clean_prompt(prompt):
     """
     Removes any audio fragments or additional words before the wake word
@@ -203,9 +216,10 @@ def clean_prompt(prompt):
     if (first_occurance == -1):
         print("Trigger word not found")
         return prompt
-        
+
     trimmed_string = prompt[first_occurance:]
     return trimmed_string
+
 
 def remove_trigger_word(prompt):
     """
@@ -215,7 +229,7 @@ def remove_trigger_word(prompt):
     if (trim_length != -1):
         trimmed_string = prompt[trim_length + len("Jarvis, show me"):]
         return trimmed_string.strip()
-    
+
     trim_length = prompt.find("Jarvis,")
     if (trim_length != -1):
         trimmed_string = prompt[trim_length + len("Jarvis,"):]
@@ -234,6 +248,7 @@ def remove_trigger_word(prompt):
     print("Trigger word not found")
     return prompt
 
+
 def loading_screen_manager(loading_screen_event):
     for i in range(17):
         # Break out of loading screen once we have a response from openai
@@ -241,6 +256,7 @@ def loading_screen_manager(loading_screen_event):
             break
         loading_frame(display, i)
         time.sleep(0.1)
+
 
 def random_image_manager(random_image_event):
     counter = 0
@@ -252,20 +268,26 @@ def random_image_manager(random_image_event):
         if counter % 600 == 0:
             display_random_image()
 
+
 async def main():
     while True:
         try:
             random_image_event = threading.Event()
-            random_image_thread = threading.Thread(target=random_image_manager, args=(random_image_event,))
+            random_image_thread = threading.Thread(
+                target=random_image_manager, args=(random_image_event,))
             random_image_thread.start()
-        
-            await asyncio.gather(voice_trigger_setter(), voice_trigger_waiter())
+
+            # Create WakeWord Event
+            wakeword_event = asyncio.Event()
+            await asyncio.gather(voice_trigger_setter(wakeword_event), voice_trigger_waiter(wakeword_event))
+
             random_image_event.set()
             random_image_thread.join()
             print("Awake")
 
             loading_screen_event = threading.Event()
-            loading_screen_thread = threading.Thread(target=loading_screen_manager, args=(loading_screen_event,))
+            loading_screen_thread = threading.Thread(
+                target=loading_screen_manager, args=(loading_screen_event,))
             loading_screen_thread.start()
 
             prompt = await asyncio.gather(assemblyai_manager())
