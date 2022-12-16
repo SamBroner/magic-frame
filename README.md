@@ -1,7 +1,7 @@
 # Magic Frame
 A "magic frame" that displays generated art from audio prompts to an e-ink display.
 
-[See it in action](https://twitter.com/SamBroner/status/1602137871523143680)
+[See it in action on Twitter!](https://twitter.com/SamBroner/status/1602137871523143680)
 
 - Images Generated from [Dall-E 2](https://openai.com/dall-e-2/)
 - Realtime Transcription from [AssemblyAI](https://www.assemblyai.com/)
