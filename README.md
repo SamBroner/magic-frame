@@ -3,6 +3,9 @@ A "magic frame" that displays generated art from audio prompts to an e-ink displ
 
 [See it in action on Twitter!](https://twitter.com/SamBroner/status/1602137871523143680)
 
+https://user-images.githubusercontent.com/6915288/208144353-dbfd307b-26e0-43ca-bad2-7b634bf11b61.mp4
+
+**Features**
 - Images Generated from [Dall-E 2](https://openai.com/dall-e-2/)
 - Realtime Transcription from [AssemblyAI](https://www.assemblyai.com/)
 - Wakeword Detection from [Picovoice Porcupine](https://github.com/Picovoice/porcupine)
